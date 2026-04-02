@@ -3,367 +3,714 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Other Bodies — Night Sky Map</title>
+<title>Other Bodies — Star Chart</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #04040f; font-family: sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 24px 16px; }
-h1 { color: rgba(255,255,255,0.75); font-size: 15px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+body { background: #04040f; font-family: sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+h1 { color: rgba(255,255,255,0.75); font-size: 15px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; text-align: center; }
 p.sub { color: rgba(255,255,255,0.35); font-size: 11px; margin-bottom: 16px; text-align: center; letter-spacing: 0.05em; }
-#wrap { width: 100%; max-width: 960px; }
+#wrap { width: 100%; max-width: 980px; }
 #sky { position: relative; width: 100%; background: #070712; border-radius: 12px; overflow: hidden; cursor: grab; }
 canvas { display: block; width: 100%; }
-#tooltip {
-  position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.2s;
-  background: rgba(10,10,26,0.97); border: 0.5px solid rgba(255,255,255,0.25);
-  border-radius: 8px; padding: 10px 14px; max-width: 260px; z-index: 10;
+#overlay {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(4,4,15,0.85); align-items: center; justify-content: center; padding: 24px;
 }
-#tooltip .t-name { font-size: 13px; font-weight: 500; color: #fff; margin-bottom: 4px; }
-#tooltip .t-body { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.5; }
-#legend {
-  display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px;
-  background: rgba(7,7,18,0.9); border-top: 0.5px solid rgba(255,255,255,0.1);
-  border-radius: 0 0 12px 12px;
+#overlay.active { display: flex; }
+#card {
+  background: #0d0d24; border-radius: 14px;
+  border: 0.5px solid rgba(255,255,255,0.18);
+  max-width: 540px; width: 100%; padding: 32px 36px 28px; position: relative;
 }
-.leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.7); cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: background 0.15s; }
+#card-color-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 14px 14px 0 0; }
+#card-feeling { font-size: 22px; font-weight: 500; color: #fff; margin-bottom: 6px; margin-top: 8px; }
+#card-body { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 20px; opacity: 0.55; }
+#card-prompt { font-size: 13.5px; line-height: 1.8; color: rgba(255,255,255,0.76); max-height: 55vh; overflow-y: auto; white-space: pre-line; }
+#card-prompt::-webkit-scrollbar { width: 4px; }
+#card-prompt::-webkit-scrollbar-track { background: transparent; }
+#card-prompt::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+#close-btn { position: absolute; top: 14px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.4); font-size: 20px; cursor: pointer; line-height: 1; transition: color 0.15s; }
+#close-btn:hover { color: rgba(255,255,255,0.8); }
+#card-constellation { margin-top: 20px; padding-top: 14px; border-top: 0.5px solid rgba(255,255,255,0.1); font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.06em; text-transform: uppercase; }
+#legend { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; background: rgba(7,7,18,0.9); border-top: 0.5px solid rgba(255,255,255,0.1); border-radius: 0 0 12px 12px; }
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.65); cursor: pointer; padding: 2px 7px; border-radius: 4px; transition: background 0.15s; }
 .leg-item:hover { background: rgba(255,255,255,0.08); }
 .leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-#info-bar { padding: 8px 12px; background: rgba(7,7,18,0.8); font-size: 11px; color: rgba(255,255,255,0.4); text-align: center; border-top: 0.5px solid rgba(255,255,255,0.06); }
-footer { margin-top: 16px; font-size: 10px; color: rgba(255,255,255,0.2); text-align: center; letter-spacing: 0.06em; }
+#info-bar { padding: 7px 12px; background: rgba(7,7,18,0.8); font-size: 11px; color: rgba(255,255,255,0.35); text-align: center; border-top: 0.5px solid rgba(255,255,255,0.06); }
+footer { margin-top: 14px; font-size: 10px; color: rgba(255,255,255,0.2); text-align: center; letter-spacing: 0.05em; }
 </style>
 </head>
 <body>
 <div id="wrap">
-  <h1>Other Bodies</h1>
-  <p class="sub">A night sky map of feeling constellations · Make Space · therapeuticstudio.ca</p>
-  <div id="sky">
-    <canvas id="c"></canvas>
-    <div id="tooltip"><div class="t-name" id="tt-name"></div><div class="t-body" id="tt-body"></div></div>
-  </div>
+  <h1>Other Bodies — Star Chart</h1>
+  <p class="sub">A map of feeling constellations · Make Space · therapeuticstudio.ca</p>
+  <div id="sky"><canvas id="c"></canvas></div>
   <div id="legend"></div>
-  <div id="info-bar">Hover a star to read its prompt · Drag to pan · Scroll to zoom · Click a constellation in the legend to focus</div>
+  <div id="info-bar">Hover to find your star · Click to read its full prompt · Drag to pan · Scroll to zoom · Click a constellation to focus</div>
 </div>
-<footer>Inspired by Shauna Kaendo & Erotics of Liberation · Part of the Make Space year-long practice</footer>
+
+<div id="overlay">
+  <div id="card">
+    <div id="card-color-bar"></div>
+    <button id="close-btn" onclick="closeCard()">&#x2715;</button>
+    <div id="card-feeling"></div>
+    <div id="card-body"></div>
+    <div id="card-prompt"></div>
+    <div id="card-constellation"></div>
+  </div>
+</div>
+
+<footer>Inspired by Shauna Kaendo &amp; Erotics of Liberation · Part of the Make Space year-long practice</footer>
 
 <script>
+// ─── FULL PROMPT DATA ───────────────────────────────────────────────────────
+const P = {
+  ashamed: `Consider, for a moment, the octopus — soft-bodied, many-armed, slipping through the shifting blues of its underwater world. Watch how, with a thought, it changes its colour and pattern, not in the name of trickery, but as a living reply to the world's demands. Its skin, a canvas for feeling, reads the tides, the shadows, the presence of others, and answers in blushes of ochre, indigo, pearl. What seems like hiding is, in truth, exquisite sensitivity — a whole being tuned to the pulse of its surroundings.
+
+With your brush, let your colours shift and mingle as freely as an octopus's skin. Let each watercolour bloom be a response, not a plan — a whisper of change, a flicker or a flush across the page. There is no need for a picture, no pressure to explain. Simply notice how you feel, and let your hand answer, mark by mark, in the language of colour.
+
+As you paint, consider that what we sometimes call hiding or shame may be our own deep sensitivity — our bodies responding as best they can.`,
+
+  afraid: `Imagine, for a while, the feeling of fear — not as a fault, but as a cave in the hillside of your own being. See how the cave does not turn its back on the world; instead, it opens a mouth to the air and offers its darkness as sanctuary. What enters is not lost, but held: in stillness, in quiet, in the slow hush of stone and shadow. Here, there is no demand to rush; here, every trembling thing is given space to breathe, to gather itself, to wait for the return of light.
+
+With your brush, invite a wash of deep colour — let it pool, shadowed and gentle, across the page. Allow your hand to move without hurry or aim, letting darkness settle and expand, not as a hiding place, but as a cradle for whatever needs holding. There is nothing to fix, nothing to finish — only a space to dwell, to rest, to be with what is.
+
+As you paint, let your practice be an act of offering: darkness as a kindness, a place where fear can soften and simply exist.`,
+
+  numb: `Bring to mind the silent country of permafrost — earth that remains frozen, season after season, not from lack, but from a kind of careful keeping. Beneath its hard, cold surface lies the memory of forests, the roots of old grasses, seeds and bones and stories, all held in patient suspension. Permafrost is not empty; it is a vault, preserving whole worlds until the time comes for thaw and renewal. Numbness, too, is not absence. It is ancient storage — life held in trust, awaiting the warmth that will let it move again.
+
+With your brush, lay down a wash of cool, pale colour. Let it settle, let it seem still and unmoving. Beneath the surface, invite other colours to creep and linger — hidden, waiting, quietly vibrant. There is no need for your marks to speak loudly or show themselves all at once. Allow space in your painting for what is unseen, for what rests beneath, for all that is being kept safe.
+
+As you paint, notice if there are feelings, memories, or parts of yourself that have gone quiet, frozen for a while.`,
+
+  withdrawn: `Turn your attention for a while to the tide pool, revealed at low tide — a quiet basin left behind as the great ocean draws its breath. Notice how, when the water recedes, the tide pool does not vanish or despair; it gathers itself, draws its small world closer. Sheltered within a cradle of stone, it holds seaweed and anemone, crab and shell, all the colors and textures of life condensed and waiting.
+
+With your brush, let your colours pool and concentrate. Allow the paint to collect in gentle hollows, to mingle and rest in small, bright gatherings. There is no need to make a picture of the tide pool — only to notice what it feels like to hold space, to keep company with yourself when the world pulls away. Let each mark be a kind of gathering-in, a quiet act of presence, a way of tending to what remains.
+
+As you paint, remember the patience of the tide pool: how it endures, how it shelters its ecosystem, how it trusts the ocean's return.`,
+
+  guarded: `Turn your attention to the pine cone, nested among needles, enduring the dry heat of the afternoon. Notice how, beneath the harsh glare and crackle of thirst, it draws its scales tight — not as a denial of the world, but as a quiet act of discernment. The seeds within are not lost; they are protected, waiting for the kindness of rain, for the moment when the air softens and the earth says, now.
+
+With your brush, lay down a wash that feels parched — ochres, siennas, faded greens. Let your marks curl inward, gathering themselves, edges drawn close. There is no need for your painting to open or to spill itself — let it hold, let it keep something safe inside. This is not refusal, but wisdom: a knowing of what must wait, a promise that opening will come when it is safe.
+
+As you paint, rest in the understanding that guardedness is its own form of care.`,
+
+  grief: `Let your thoughts settle on moss — a green hush spreading over stones, fallen logs, the quiet remains of what once stood upright. Notice how moss does not rush to erase what has come undone. Instead, it gathers gently along the edges of ruin, softening splinters, cloaking the broken in velvet patience. Moss turns decay into something bearable, a small act of kindness for the past, making room for what the present brings.
+
+With your brush, invite a slow, spreading green, letting the paint creep and linger over the paper's surface. Do not hurry to cover or correct; let your colours settle softly, holding space for what is imperfect, for what has weathered and worn. There is no need to disguise the rough patches — let them show, let them be gently cradled by your marks.
+
+As you paint, consider how moss teaches the art of living with what cannot be fixed.`,
+
+  sad: `Turn your gaze to the hush of still water, its surface unbroken until the rain arrives — each drop a brief insistence, a gentle shattering. Rain does not pause at the edge nor hesitate to touch; it simply falls, and in falling, sends ripples out in all directions. There is no apology, no need to smooth what is stirred. The disturbance is honest, each circle widening, overlapping, until the water settles once again.
+
+With your brush, let a wash of colour rest quietly across the page, then invite other drops to fall — a touch here, a touch there — watching as the pigment spreads, sending out its own small waves. Don't worry if the surface is disrupted, if the marks run into one another or blur; this is the truth of rain on water. The ripples are real, and they matter, even as they pass.
+
+As you paint, allow yourself to notice what happens when you disturb your own stillness.`,
+
+  exhausted: `Let your thoughts follow the long journey of a river, winding its way from distant mountains, gathering speed and purpose as it carves through stone and valley. In time, the river finds its end — not in disappearance, but in transformation. At the delta, the water slows, spreads, embraces the wide open, and divides itself into many channels, each carrying its own silt and story. This is not failure, but fulfillment: the gentle unfolding at the journey's end, where the river makes new land, rich with possibility.
+
+With your brush, lay down a wash that travels — moving, branching, gradually slowing as it reaches the edges of the page. Let your colours spread and mingle, forming pools and fingers, each one a quiet celebration of arrival. Do not rush to contain or direct them; let the paint settle and divide as it will, marking the place where movement becomes rest, and striving gives way to abundance.
+
+As you paint, consider your own journeys and the places where you have slowed, where you have allowed yourself to open and change.`,
+
+  despair: `Bring to mind the silent silhouette of a dormant volcano, rising out of the land — its slopes softened by years of wind and rain, a mountain mistaken for calm. Yet beneath that stillness, deep within the earth, heat persists: not vanished, only waiting. The fire is held close, pressure building quietly, tracing secret paths through stone, biding its time for the moment when it must speak.
+
+With your brush, let a wash of muted colour form the broad, gentle shape of rest. Beneath the surface, invite threads of warmth — quiet reds, glowing ochres, the suggestion of hidden heat — hinting at what lives below. There is no need for eruption, no need for spectacle; simply hold the presence of what is powerful, contained, and patient.
+
+As you paint, consider the places in yourself where energy waits, where feeling simmers beneath the calm of everyday.`,
+
+  heaviness: `Turn your attention to clay soil after rain — earth dark and dense, heavy with the memory of water. Even when the storm has wandered on and the sky has cleared, the clay remains saturated, holding tight to every drop. This is not stubbornness, but a kind of devotion; the soil keeps what it has been given, letting the moisture seep slowly, patiently, into its depths. In time, with sun and air, the clay loosens, softens, and what was once held so tightly becomes nourishment for roots, for seeds, for all that grows.
+
+With your brush, lay down a wash that feels full and slow — colours pooling and settling, edges blurred by the weight of what they contain. Let your paint linger on the page, not in a hurry to dry or move on. Notice what it feels like to be saturated, to hold experience within yourself, letting it rest and soak until it is ready to be released.
+
+As you paint, allow the act to be an acceptance of fullness — of all you carry, all you have absorbed.`,
+
+  lonely: `Let your mind descend to the deep ocean, where darkness is near-total and silence complete. Down here, beyond the reach of the sun, companionship is a rare and passing gift. Yet in this utter dark, certain creatures begin to glow — soft pulses of blue or green, a radiance that is not borrowed or reflected, but born within. They shine not for an audience, nor as a call, but simply because light is what they are made of. Loneliness, here, does not extinguish what is luminous; it is sometimes the only condition dark enough to reveal it.
+
+With your brush, begin with a wash of the deepest blues, indigos, the shadowed colours of the ocean's depth. Then, with a lighter touch, let small blooms of bright colour emerge — delicate, unexpected — spreading quietly into the darkness around them. Your painting is not for display; it is simply the act of allowing what glows in you to come forward, no matter how softly or briefly.
+
+As you paint, trust that your own luminousness is not lost in solitude.`,
+
+  tender: `Let your thoughts drift beneath the forest floor, where darkness and damp hold a hidden network — mycelium weaving its fine threads through earth and root, binding the living to the dead, the strong to the struggling. Here, in the hush beneath all growing things, nourishment passes quietly from what is abundant to what is in need. Mycelium does not show itself, nor does it seek praise. Its tenderness is silent, persistent — a gift of connection, invisible yet essential.
+
+With your brush, lay down a gentle wash — soft browns, muted greens, a whisper of grey. Let thin lines and pale trails wander slowly through the wetness, crossing and meeting, then drifting apart again. There is no need for clarity or centre; let your marks suggest a world beneath, patient and alive, supporting what is seen above.
+
+As you paint, consider the acts of tenderness that may never be noticed, the ways you nourish and are nourished, wordlessly, every day.`,
+
+  longing: `Turn your mind to a lone migratory bird, lingering beneath a sky that offers neither the warmth of return nor the promise of departure. Out of season, it waits, uncertain, yet the longing it feels is not a failing nor a whim. This yearning is etched in bone and feather — a pull toward an elsewhere that is as real as the air it breathes. The bird does not invent its longing; it is fidelity to a place, a time, a rhythm written into the body itself.
+
+With your brush, lay down a wash that travels — soft sweeps of blue or grey, restless but sure, moving across the page without clear destination. Let the colours drift, pause, and gather, echoing the sense of waiting, of being between. Your painting need not arrive anywhere, nor must it resolve; let it be a record of longing that is neither restlessness nor mistake, but the honest work of being true to what calls you.
+
+As you paint, consider the places in yourself where longing lives — not as a flaw, but as a quiet faithfulness to what is real, even if it is not yet here.`,
+
+  love: `Turn your thoughts to the river as it journeys toward the sea, each bend and eddy shaped by the quiet force of longing. The river does not choose to love the sea — this movement is written into its very being. It follows the pull without question, patient with every detour, carving new channels when the way is blocked, never doubting the direction, only knowing that love draws it onward.
+
+With your brush, let a gentle wash of colour meander across the page, flowing easily and then pausing, turning where it must, finding a path around every obstacle. Let your paint move with its own quiet certainty — sometimes quick, sometimes slow, always moving toward something deeper. There is no need to plan or strive; trust that what you feel will guide the marks you make.
+
+As you paint, rest in the knowledge that love, too, is not a decision but a current — a force that shapes and reshapes you, that carves new ways through your life, that is patient, persistent, and sure.`,
+
+  jealous: `Let your thoughts settle for a moment on a plant in a dim room, stretching silently toward the single window, its leaves and stems bending in patient pursuit of light. This reaching is not greed, but simple honesty — a quiet declaration of need, a willingness to grow in the direction of what sustains. The plant does not apologize for its longing; it leans, day by day, toward brightness, because survival asks for nothing less. And so too, jealousy sometimes arises when longing has nowhere else to look — its root not malice, but a hunger for what is needed and rare.
+
+With your brush, lay a gentle wash of colour that reaches — let your marks lean or curve toward a pale patch on the page, following the imagined path of sunlight. Allow your painting to stretch, to bend, to gather itself in the direction of what calls it forward. There is no need for symmetry or restraint; let your colours be drawn, honestly, toward what would sustain them.
+
+As you paint, consider the places in yourself that lean toward light, that turn, unashamed, toward hope or comfort or love.`,
+
+  betrayed: `Let your thoughts rest on the soil after wildfire, blackened and bare beneath a sky washed clean by flame. At first glance, it seems all has been lost — what once grew here is ash, what once sheltered is gone. Yet beneath the scorched surface, life endures in quiet persistence. The ground remembers how to hold moisture, how to cradle seeds. It is not ruined, only changed. What was built here has passed; what will grow next remains unknown. Still, the earth endures, waiting, patient, quietly alive.
+
+With your brush, lay down a wash dark as charcoal, letting it sit heavy on the page. Beneath this, allow hints of softer colour to seep through — greens, golds, the faintest blush of new beginnings — emerging slowly, almost hidden. Do not hurry to cover the darkness or disguise the loss. Let your painting hold both what was burned and what still lives below.
+
+As you paint, consider the places in your own life marked by loss or change — where what once was is gone, and what comes next is still unseen.`,
+
+  angry: `Let your mind turn to the river in flood — banks overtopped, waters rushing with a force that cannot be denied. This is not simple destruction, nor blind rage. The river moves with purpose, carrying away what has gathered and blocked its path for too long. Branches, silt, stones — each caught in the current, swept forward by necessity. There is a wildness here, yes, but also a clear knowing: the river remembers its shape and seeks to find it again.
+
+With your brush, let your colours surge and sweep across the page. Paint with movement, with weight, letting pigment gather and run, carrying with it whatever it finds — old marks, sediment, the traces of what came before. Do not fear the chaos; let it speak of what must move, of what must finally be released.
+
+As you paint, consider the places in yourself where feeling has built up, where something long-blocked now presses to be set free.`,
+
+  anxious: `Let your thoughts drift upward to a murmuration of starlings — thousands of wings flickering against the evening sky, weaving and folding in patterns that seem both wild and gentle. No single bird knows the shape of what they make together; the flock turns and dips, responding to the subtle cues of neighbour and breeze. There is no fixed destination, only the constant shifting, the willingness to stay close, to trust the movement even when the direction is uncertain. Out of this unknowing, something beautiful emerges — coherence from chaos, belonging from drift.
+
+With your brush, let loose a constellation of marks — scattered, swirling, gathering and parting as they will. Allow your colours to move in response to each other, to group, to drift apart, to find new forms in the space between. There is no need for a plan; let your painting echo the flock, each gesture a response, a keeping-close, a trust in what will come.
+
+As you paint, consider the moments in your own life when you have not known the way forward, but have moved anyway — guided by instinct, by the presence of others, by the hope that beauty can arise from uncertainty.`,
+
+  urgent: `Turn your attention to the salmon running upstream, muscle and will pressed against the rush and tumult of water. This is not panic, nor flight; it is an answer to a call sounded deep within the bones, a summons that brooks no argument. The salmon leaps and strains, guided by something older than thought, urgency rising not from fear, but from the certainty of purpose — a life's meaning condensed into swift, determined motion.
+
+With your brush, let your colours surge upward — quick strokes, bold splashes, the unmistakable sense of direction and drive. Let the paint move fast across the page, carving a path against the current, energy gathering at each mark. There is no need for caution or pause; let your hand answer the call, letting urgency become movement, and movement become expression.
+
+As you paint, consider the places in yourself where urgency is not anxiety, but the bright pull of purpose — where you are carried by what must be done, what calls you to action without hesitation.`,
+
+  frustrated: `Turn your thoughts to water as it meets a blocked path, the easy course suddenly denied. Yet water does not halt in defeat. It presses gently at every edge, pools with quiet patience, listens for a weakness or a seam. If no way is offered, it waits, gathering itself in stillness, certain that time or persistence will open the way. There is no shame in the pause, no hurry in the pressure. What seems like frustration is only water biding its time, learning the shape of what resists it, until — inevitably — it finds or makes a passage through.
+
+With your brush, lay down a wash that pools and spreads, then encounters a barrier — a ridge of dry paper, a line of unmoving colour. Let your paint test the edges, linger in the hollows, spill slowly, seeking its own route. Do not force a breakthrough; let the water show you its patience, its quiet insistence, its willingness to wait and to try again.
+
+As you paint, consider the places in yourself where frustration gathers, where progress is slowed by obstacles not of your making.`,
+
+  restless: `Let your mind turn to the tides — ceaseless, never still, drawn onward and back by the silent gravity of distant moons. The tide does not apologize for its restlessness, nor does it mourn its inability to settle. It is not broken for moving; it is faithful to a rhythm larger than itself, governed by a pull so vast and ancient it cannot be denied. What appears as unease is only the body remembering the cycles it belongs to, the way water remembers the moon.
+
+With your brush, lay down washes that rise and fall across the page — colours that surge forward, then withdraw, never quite coming to rest. Let your marks ebb and flow, overlapping and returning, allowing repetition and motion to shape your painting. There is no need for a final stillness; let the movement be its own truth, a honoring of the restless tide within.
+
+As you paint, consider the times when your own body cannot be quiet, when you are drawn to movement for reasons you cannot name.`,
+
+  doubt: `Let your thoughts rest for a moment on a young tree caught in the wind. See how it bends — perhaps too far, trembling at the edge of what seems possible, its slender trunk swaying wildly beneath the weight of the storm. It looks uncertain, precarious even, but this bending is not weakness. Each gust presses the roots deeper, each moment of doubt teaching the tree how to hold fast to the earth that sustains it. What seems like frailty is the slow work of strength being woven, the quiet labor of belonging more fully to the ground.
+
+With your brush, let your colours arc and waver across the page — lines that lean, shapes that curve and twist, marks that seem almost to topple. Do not correct the unsteadiness; let your painting record the dramatic bending, the places where you felt pushed or stretched. Allow some colours to anchor themselves below, spreading and thickening, as roots do in searching for steadiness.
+
+As you paint, consider the storms of self-doubt that shake you.`,
+
+  inadequate: `Let your gaze settle on lichen clinging to bare rock — a small, persistent presence where there is almost nothing to begin with. No soil, no shelter, only the hard certainty of stone and the uncertain promise of air and light. Lichen does not wait for the world to become gentle or easy. It begins, quietly, with what little it has, and by its patient work, starts to turn the impossible into home. Inadequacy, here, is not failure, but simply earliness — the beginning of what might one day flourish.
+
+With your brush, lay down a wash of grey or muted stone, and then, with gentle taps or spreading stains, let small outposts of colour appear — soft greens, pale golds, a slow, quiet expansion. Let your marks be tentative, scattered, unhurried. There is no need to fill the page or to prove abundance; let your painting honour the courage of beginnings, the resilience of what grows with almost nothing.
+
+As you paint, consider the places in yourself that feel too small, too early, not enough.`,
+
+  proud: `Turn your gaze to a tree standing in the fullness of its canopy, branches spread wide, leaves casting a generous shade upon all beneath. This abundance was not hurried — no branch forced, no ring added by impatience. Year by year, the tree grew, silent in its perseverance, layering strength and memory beneath its bark. Now, in its season of fullness, it gives freely — shelter, coolness, a home for birds and rest for wanderers — yet loses nothing of itself in the giving. Pride, here, is not arrogance, but the quiet acknowledgment of rings: each a testament to endurance, to weathering, to slow and patient becoming.
+
+With your brush, let colours gather and expand — broad washes, layered greens, arcs that stretch across the page, overlapping in gentle abundance. Allow your painting to grow outward from a quiet centre, each mark a ring, a season, a record of arrival. There is no need to rush or to fill every space; let your work unfold at its own pace, generous but unforced.
+
+As you paint, consider the places in yourself where you have earned your rings — where patience and persistence have shaped you, where you can stand in quiet fullness without apology.`,
+
+  regret: `Let your mind linger on a river that has, over the years, shifted its course — finding a new way through the land not out of error, but in answer to change. The landscape tilted, stones moved, banks collapsed, and the river, true to its nature, followed where it was drawn. The old channel remains — a quiet scar, a memory of water's earlier passage, woven into the geography rather than erased. There is no shame in the turn, no need to hide what once was. Both paths belong to the story of the river.
+
+With your brush, lay down a wash that winds and bends, then, beside it, another line — fainter, softer, a ghost of the first, curving through the paper's white. Let your colours drift, overlap, diverge. There is no need to choose or correct; let each channel be visible, each course honoured for what it carried.
+
+As you paint, consider the times you have had to change direction — not because you were lost, but because the world shifted and you followed.`,
+
+  guilty: `Turn your thoughts to the meadow after a storm — branches bent, leaves scattered, grass pressed flat by the restless passage of wind and rain. The storm did not linger to count what it disturbed, nor did it pause to claim victory or to apologize. It moved through, spent itself completely, and left what it left. The broken stems, the new light on the wet earth — these are real, shaped by the storm's wild energy. Yet the storm cannot undo them, nor can it prevent the slow, persistent return of the meadow to itself — green shoots rising, birdsong resuming, the ordinary work of recovery beginning again.
+
+With your brush, lay down a wash that sweeps across the page — bold, loose, uncontained. Let your marks bend, scatter, break apart, making room for emptiness and aftermath. Then, with gentler strokes, invite the beginnings of return — soft greens, small uprisings, the subtle evidence of endurance.
+
+As you paint, let yourself consider the truth of guilt: the ache of knowing that something real happened, that your passing left a mark, held alongside the understanding that, like the storm, you were being yourself as you adapt and change.`,
+
+  joy: `Turn your gaze to a field of wildflowers after a long, soaking rain. See how they lift their heads in sudden colour, petals unfurling with no plan, no consultation, no signal but the long-awaited touch of water and light. Each blossom responds on its own, and yet the field blooms together, riotous and uncoordinated, a chorus of arrival without rehearsal or permission. There is no calculation here, no careful timing — only the honest answer to what has been needed for so long. Joy, too, can appear this way: not summoned or chosen, but arriving all at once, the whole field of you opening in response to what is finally enough.
+
+With your brush, let your colours burst across the page — spontaneous, bright, scattered wherever the impulse lands. Let each mark be its own bloom, unconcerned with order or symmetry. Allow the washes to mingle and overlap, a celebration of suddenness, of joyful chaos, of the freedom to open without waiting for approval.
+
+As you paint, consider the moments when joy has come upon you unexpectedly — when something in your spirit responded, not from decision, but from sheer relief or gladness.`,
+
+  wonder: `Let your mind descend to the deep ocean, where a whale lifts its voice in the blue twilight, sending song into water thick with distance and silence. The notes travel, not hurried, but sure — carried through cold, through pressure, through darkness that would seem to swallow all sound. Yet the song continues, undiminished by the journey, until — miles and miles away — another whale hears it, recognizes the pattern, answers in turn. This is the marvel: that something true can move so far, and that in the vastness, there is always the possibility of being heard.
+
+With your brush, lay down a deep wash, a wide ocean of colour. Let gentle waves and long, sweeping marks rise and fall across the page, a visual echo of distant music. Allow a single line or tone to travel — unbroken, persistent — across the wetness, reaching for the far edge. Do not worry if it seems to disappear or thin; trust that somewhere, it may yet arrive.
+
+As you paint, consider the moments in your own life when you have sent something true into the world — an offering, a hope, a song — and wondered if it would find a listener.`,
+
+  grateful: `Let your gaze rest on a tree in autumn, its branches loosening their grip as the days grow shorter and the air sharpens with coming cold. See how the leaves, once held so tightly, now drift down in quiet spirals, gold and crimson, returning to the earth without sorrow or regret. The tree does not grieve what it lets go; it offers its leaves back to the ground that nourished them, a gesture of gratitude that knows holding on is not the measure of love. Each leaf is released with full acknowledgment of what was given — sunlight caught, rain gathered, shelter made — and is offered back to become soil, to feed roots, to ready the tree for another season.
+
+With your brush, let colour fall gently onto the page — warm golds, reds, and browns, scattered and layered as if by wind. Let your marks drift and settle, accumulating softly, not in haste but in quiet acceptance. There is no need to gather or arrange them; let your painting be a record of release, an honouring of what has been given and now returns.
+
+As you paint, consider all you have received and all you are ready to let go — not with sadness, but with gratitude.`,
+
+  awe: `Let your gaze settle on the edge of a canyon — sheer, vast, carved by the endless, quiet work of water moving through stone. The canyon does not strive to impress; it is not hurried or ostentatious. Its grandeur is simply the patient accumulation of years upon years, each passing storm, each trickle and torrent contributing to the slow unveiling of depth and form. In standing at such an edge, you meet the evidence of patience far older and larger than your life — shapes and shadows made not by force, but by the steady, persistent attention of time.
+
+With your brush, lay down a wash that suggests distance and depth — broad sweeps of earth and shadow, lines that drop away into the unknown. Let your colours layer and pause, shaped by what is left unpainted as much as by what is filled in. Allow the slow movement of water and pigment to echo the ancient work that shaped the canyon, building form through patience rather than speed.
+
+As you paint, consider the places in yourself shaped not by sudden change, but by the long, steady passage of time — by what you have endured, by what you have waited for.`,
+
+  curious: `Let your thoughts settle beneath the surface, where a root, pale and persistent, feels its way through the dark. It does not begin with a map, nor does it fret over certainty. Instead, it follows what it senses — moisture, warmth, a seam of possibility — changing direction without apology, splitting and reaching, finding nourishment in the least likely places. The stone it encounters does not halt it; the root simply bends, presses on, testing every crevice until it finds a way through. This is not stubbornness, but the quiet, relentless work of curiosity: seeking, feeling, moving forward, ever open to surprise.
+
+With your brush, let a line or wash begin anywhere on the page. Allow it to twist and turn, branching out, doubling back, changing course as the paper offers resistance or invitation. Do not plan the path; let your painting find its own way, trusting the instinct to reach, to explore, to discover. Let new colours appear where you least expect them, small bursts of life in stony ground.
+
+As you paint, consider the questions that pull you forward, the places where you have changed direction, the wonders you have found by following what called to you.`,
+
+  excited: `Let your thoughts turn to the bee, small and tireless, who stumbles upon a field in the wild riot of full bloom. For the bee, discovery is not something to be kept in secret or stored away for leaner days. It returns at once to the hive, carrying not just pollen but news — its whole body alive with the urgency of translation, performing the age-old waggle dance. In circles, in trembling lines, it tells of direction, of distance, of abundance: a message too rich to be held alone. Excitement, in this way, is the body's own dance — the irrepressible impulse to share what overflows, to let movement become meaning, to make joy visible.
+
+With your brush, lay down bursts of colour — sudden, bright, alive with energy that spills and overlaps. Let your hand move with the quickness of discovery, marks darting, circling, doubling back, translating the feeling of "too good to keep to myself" onto the page. There is no need to restrain or order; let excitement move through you, making its own sense in motion and hue.
+
+As you paint, remember the moments when delight refused to be quiet, when news or beauty or hope radiated through you and demanded expression.`,
+
+  still: `Let your mind rest upon a deep lake in winter, its surface stilled beneath a skin of ice, the world above made quiet by cold. Yet look deeper, past the brittle shimmer — there, the water moves at its own slow pace, fish drift and turn, and the secret work of life endures. The silence above is not a sign of emptiness, but of aliveness turned inward, of the world conserving itself for the seasons yet to come. Stillness here is not absence, but presence in another form, a gentle patience that holds all that lives beneath the frozen calm.
+
+With your brush, lay down a wash of pale blues and muted silvers, a soft hush across the page. Then, beneath this quiet surface, let deeper colours bloom and move — shadows, currents, the suggestion of hidden motion. Let some marks linger in the depths, unseen at first glance but quietly vibrant, a record of the life that continues even in apparent stillness.
+
+As you paint, consider the times you have felt quiet, not for lack of feeling but because your aliveness was gathering inward, conserving, waiting.`,
+
+  peaceful: `Let your thoughts settle on a meadow after a long, soaking rain — the grass bowed but unbroken, each blade glistening, the air newly alive with the scent of petrichor. There is no proclamation of relief here, no song or spectacle; the meadow simply opens itself, pores wide, quietly absorbing what it has thirsted for. The ground grows supple, the roots remember their depth, and the world breathes differently for a while. Peace, in this place, is not the absence of weather, nor the forgetting of storms. It is the body after weather, breathing again, replenished and receptive, holding the memory of rain in every cell.
+
+With your brush, lay down a gentle wash — greens, golds, earth softened by water. Let drops and pools of colour mingle and settle, as rain does in the hollows of the field. Allow the marks to rest, unhurried, each one a quiet intake, a silent welcome to what has come at last.
+
+As you paint, consider the moments when peace has found you — not as a denial of trouble, but as a slow release, a readiness to receive what you needed.`,
+
+  content: `Let your mind wander to a bear in late autumn, fur thick with the memory of sun and berry, body heavy with the patient labor of the season. The trees have shed their leaves, the air is edged with chill, and the earth is quieting itself for winter's long embrace. The bear does not rush or strive now; it feels the fullness of enough. There is still more to come — cold nights, deep sleep, the hush of snow — but here, in this pause, the bear has what it needs. Contentment is not the end of wanting, but the gentle interval between seasons, the deep breath before descent.
+
+With your brush, let colours gather slowly — warm browns, soft golds, the muted greens of moss and pine. Allow your marks to settle and spread, unhurried, building a quiet abundance on the page. Let there be space in your painting for rest, for the slow certainty of having gathered enough, for the ease that comes when striving ceases, if only for a moment.
+
+As you paint, consider the pauses in your own life, the times when you have found yourself with enough — not finished, not empty of desire, but content in the fullness of now.`,
+
+  safe: `Let your thoughts wander to the heart of an old growth forest, where towering trunks rise out of moss and shadow, each ring a testament to seasons endured. Here, the air is thick with memory and the hush of green; the canopy weaves its own weather, softening sun and storm alike. Beneath the surface, roots tangle and clasp, binding tree to tree, earth to earth — silent agreements made in the dark. This forest does not owe its safety to the absence of threat, but to the depth of its entanglement: branches sheltering, roots holding, every life joined with another in quiet, persistent belonging.
+
+With your brush, lay down layers of quiet colour — deep greens, browns that anchor, gentle misty washes above. Let your marks overlap and interlace, painting not just trees but the spaces between: the cradle of undergrowth, the hush beneath the branches, the sense of being held from all sides. Allow your work to grow dense, to become a place where light and shadow touch but do not disturb.
+
+As you paint, consider where you are most entangled — who or what holds you, not by keeping danger out, but by rooting you deeply in connection.`,
+
+  belonging: `Let your thoughts follow a river as it winds its way through cities and forests, marshes and meadows, sometimes lost from sight, sometimes breaking into sudden view. No matter how far the river travels, how much it wanders, it is always claimed by its watershed — drawn homeward by the unseen embrace of the land that gathers every tributary and drop. The river's belonging is not measured by how near it runs, but by the invisible catchment that shaped it from the start, the patient network of soil and slope, rainfall and root, that holds it in quiet certainty.
+
+With your brush, let water and colour flow freely across the page, branching and joining, sometimes straying, sometimes pooling. Allow your painting to wander, to appear lost, yet always returning — pulled by the gentle logic of the land beneath. Do not try to contain every movement; trust that whatever path your marks may take, they are held by something larger and unseen.
+
+As you paint, consider the places and people who have claimed you — those whose presence shapes your course, whether or not you are close by.`,
+
+  ambivalent: `Let your mind settle at the threshold of the estuary, where river meets sea in a restless mingling. Here, the water is neither wholly fresh nor wholly salt — each tide brings negotiation, each current holds a tension of opposites. The estuary is not a place of certainty, yet it is alive with possibility: reeds and rushes, shells and wings, creatures thriving in the shifting blend. Ambivalence, too, is not weakness; it is the honest meeting of two truths, each real, neither erased. In this mixing, new worlds emerge — life abundant, not in spite of complexity, but because of it.
+
+With your brush, let fresh colours bleed into salt — soft washes of blue meeting green, hints of gold or grey, edges blurring and re-forming as the water does. Let your painting hold the mingling, the uncertainty, the beauty that comes from not choosing one or the other. There is no need to resolve every boundary; let your marks linger where things combine, where tides turn, where possibility is highest.
+
+As you paint, consider the places within yourself where two realities meet — where ambivalence lives, not as confusion, but as the fertile crossing of currents.`,
+
+  overwhelmed: `Let your thoughts wander to the forest floor after heavy snowfall, where drifts pile thick and white, weighing down branches and blanketing the hush of earth. The trees do not resist; they bend, some branches even break, yet beneath the soft burden, life persists. Roots hold firm in the dark, mycelium threads continue their silent work, and seeds rest in patient waiting. Overwhelm is not collapse, but the bearing of more than usual — the quiet strength of an ecosystem that endures beneath what appears too much.
+
+With your brush, lay down a wash of pale, wintry colour — soft whites, cool blues, a gentle heaviness settling over the page. Let some marks yield or bow, some lines break, but allow hints of dark green, warm brown, or hidden gold to show beneath the snow. Paint both the weight and what remains unbroken — the quiet assurance of roots holding steady out of sight.
+
+As you paint, consider the times you have felt buried, pressed down by more than you thought you could hold.`,
+
+  confused: `Let your mind drift to a valley at dawn, where fog moves with quiet intent, softening the edges of field and forest, river and stone. The fog does not come to make things difficult; it is simply water between states, neither fully cloud nor yet rain, searching for its shape as it travels low and slow. The familiar becomes mysterious, boundaries slip away, and the world waits for definition to return. Confusion, too, is not failure of thought, but the mind in its moment between forms — midway through transformation, not yet cloud, not yet rain, simply finding its way.
+
+With your brush, spread pale washes across the page — greys, soft blues, the gentle blur of things half-seen. Let edges dissolve, shapes overlap, details retreat into mist. Paint without hurry, allowing space for uncertainty, for what is still coming into being. Let your marks drift and settle, trusting that clarity will come in its own time.
+
+As you paint, consider the times when you have found yourself in fog — uncertain, not for lack of effort, but because you are in motion, between what was and what will be.`,
+
+  hopeful: `Let your gaze fall upon a green shoot rising through cracked pavement — a slender insistence, bright and vulnerable, pushing upward where no soil was meant to stay. This shoot is not naive; it does not mistake the hardness of its world, nor pretend the odds are kind. Still, it gathers itself and leans toward light with everything it has, answering invitation with action, making a path where none was given. Hope, here, is not wishful thinking, but the steady orientation toward what sustains, even when all around seems barren and unyielding.
+
+With your brush, sweep a ground of muted grey or rough texture across the page, letting lines fracture and break to suggest the hardness beneath. Then, from a crack, let green rise — tender, luminous, reaching upward without apology. Let your marks be clear and simple, a single gesture of movement toward the possible. The contrast is not a fault, but a truth: life choosing light, again and again.
+
+As you paint, notice the places in yourself that have reached for hope — not because it was easy or certain, but because you could do nothing else.`,
+
+  disappointed: `Let your thoughts linger on a field after harvest, its expanse marked by the ragged stubble of what has been gathered and carried away. The earth is not barren, only spent — its fullness given, its promise kept, the season's work visible in every pale stalk and furrowed row. What remains is not failure but evidence: of tending, of effort, of life that flourished here. The quiet emptiness is not an end, but a pause, a moment of honest rest. Soon, the field will be turned and planted again, the cycle of renewal waiting in the dark beneath.
+
+With your brush, lay down washes of gold and ochre, rough textures and soft shadows, lines that speak of what has been cut and what endures. Let the page hold both absence and memory, the subtle beauty of something that has been given away. There is no need to fill every space; let your painting honour the stubble, the spent earth, the sense of pause before return.
+
+As you paint, consider the places in your own life where you have given all you could — where what is left behind is not defeat but the honest mark of your effort, your care.`,
+
+  nostalgic: `Let your mind rest on the image of an ancient tree, its trunk thick with years, its centre hollowed by the slow, relentless hand of time. This tree did not lose its heart to weakness, nor was it undone by the hollowing. Instead, the years carved out a space within, leaving a chamber where birds might nest and small creatures shelter. Still, the tree stands — branches outstretched, leaves shimmering in the wind, its roots deep and sure. The hollow is not absence, but memory: the silent vault where each year once lived, a testament to endurance rather than loss.
+
+With your brush, lay down strong, circling shapes — dark rings, rough textures, layers that hint at age and weathering. Let the centre open into a space of quiet, not as a wound, but as a room, a place that holds more than emptiness. Allow soft colours, gentle marks, to gather within the hollow, suggesting shelter, history, the warmth of what remains.
+
+As you paint, consider the spaces within yourself that have been shaped by time — places where something is gone, yet what endures is all the stronger for it.`,
+
+  forgiving: `Let your thoughts drift to a river winding through its valley, its water ceaseless, attentive, caressing the stones in its path. The river does not set out to smooth the rock; it simply keeps moving, day after day, year after year. The stones, steadfast in their resistance, yield not in a single instant, but through the long patience of touch and time. What results is something rounded, polished — beauty shaped by the gentle persistence of flow against hardness. Forgiveness, too, is not a moment but a direction: a slow, steadfast current wearing away what is sharp, not by force, but by returning, again and again, to the work of compassion.
+
+With your brush, lay down broad washes of water and colour, letting them move and settle as they will. Place a shape, a stone, in the stream — let pigment swirl and eddy around it, softening the edges, blurring the divide between what yields and what stands fast. Do not hurry the process; let your painting unfold slowly, tracing the long conversation between flow and form.
+
+As you paint, consider the places in yourself where forgiveness is not yet finished, where hardness and motion continue their quiet meeting.`,
+
+  vulnerable: `Let your mind rest on the image of a hermit crab between shells — soft-bodied and vulnerable, it has outgrown the safety of its old home and, for a moment, must journey exposed across uncertain ground. There is no refuge now, only the press of necessity: to leave behind what no longer fits, to risk the open world in search of the next shelter. This is the most dangerous moment, when all defenses are gone, and yet it is the only way to grow. The crab's courage lies not in bravado, but in the quiet acceptance that transformation demands exposure.
+
+With your brush, lay down the curve of an empty shell, then the hesitant form of the crab reaching out, half-shadow and half-light, moving into open space. Let your colours waver — soft, uncertain, gentle against the harsh edges of what was left behind. Leave part of the page unclaimed, a space of waiting, a place for what is yet to come.
+
+As you paint, consider the times you have found yourself between — no longer sheltered by what once held you, not yet safe in what will.`,
+
+  trusting: `Let your mind linger on the moment a seed loosens its hold and yields itself to the wind. There is no promise in this act, no map of where it will be carried, only the trust that letting go is the beginning of becoming. The seed does not release itself because it knows the destination, but because it knows that staying attached — however safe — would be the greater loss. In this brief flight, uncertainty is not failure but possibility; surrender is not defeat, but faith in what the future might hold.
+
+With your brush, begin with a gentle tether — a thin line, a pod or branch. Then let your marks lift and scatter, drifting across the page in arcs and eddies, as seeds ride on invisible currents. Let colour be light, shapes unanchored, movement the only certainty. Allow empty space to speak of the unknown, to cradle what is not yet rooted.
+
+As you paint, consider your own moments of release — when holding on was no longer growth, and you had to trust the wind.`,
+
+  repaired: `Let your thoughts rise to the high perch of the Bald Eagle, circling above the land, returning year after year to the same nest — a tangle of sticks and memory, perched against the wind. The eagle does not abandon its eyrie when the storms have weathered it thin, nor when time has made it heavy. Instead, it returns, faithful, carrying new branches, weaving old with new, repairing what needs mending. Some nests stand for decades, layer upon layer, each season's labor both a remembrance and a renewal. For the eagle, repair is not starting over, but the faithful tending of what has already been built — an act of trust in the enduring strength of home.
+
+With your brush, lay down the broad sweep of a branch, the loose lattice of a nest — marks that overlap, that show the history of many seasons. Let your colours layer and blend, old strokes meeting new, the weight of memory balanced by the freshness of each return. Allow your painting to grow dense in places, a record of care, of presence, of the quiet patience of repair.
+
+As you paint, consider the places in your own life where you return — where you do not begin again from nothing, but meet what has weathered with gentle attention, adding what is needed, mending what has frayed.`,
+
+  uncertain: `Let your mind wander to a shoreline at dusk, where the last light lingers and boundaries dissolve. Here, the land meets the water, yet neither claims the hour as its own. The sky, too, is not quite night nor day — colours drift, shadows lengthen, certainties blur. This edge of all things, where definitions soften and the world seems to hold its breath, is not a place of confusion but of possibility. Uncertainty is not the enemy of meaning; it is the place where meaning takes shape, where questions gather and answers begin to shimmer, half-formed, in the gathering dark.
+
+With your brush, lay down gentle washes that bleed into one another — blues into golds, land into water, the soft indigo of evening into the hush of sand. Let your marks be loose, your edges undefined, a meeting of forms rather than a division. Allow your painting to dwell in the space between, to hold the ambiguity of dusk, and to honour the beauty of what is not yet decided.
+
+As you paint, consider the places in yourself where you stand on the threshold — uncertain, unfinished, neither one thing nor another.`,
+
+  changed: `Let your thoughts wander through a forest in succession — where nothing stays the same, and yet nothing is truly lost. Here, light first calls up the pioneers: wildflowers, grasses, saplings springing from bare ground. In time, these give way to others, taller, hungrier for sun, their leaves shifting the shape of light below. The canopy thickens, the understory changes, each arrival making space for what comes next. This is not decline, but transformation — the forest becoming what the conditions are ready for, each stage both an ending and a beginning.
+
+With your brush, let colour arrive in layers — bright, loose marks for the first shoots, then deeper greens, branching forms, a gentle shadow across the page as the canopy fills in. Allow some marks to fade, others to emerge more boldly, the painting always in motion, always becoming. There is no need to finish or to fix; let your image shift as the forest does, honouring what was and what is coming into being.
+
+As you paint, consider the seasons of your own life, the ways you have changed and given way to yourself again and again.`,
+
+  worldgrief: `Let your thoughts linger on a glacier in retreat — ancient ice withdrawing, not in defeat, but in honest answer to the changing world. The glacier does not pretend its grief: it melts openly, its sorrow written in streams and rivulets, in the slow, persistent trickle of water finding new paths among exposed stone. What remains is not absence, but potential — bare rock, raw valley, the birth of ground waiting for its first green. The glacier, in its leaving, makes possible the coming of new life, shaping the land even as it recedes.
+
+With your brush, lay down cool, sweeping washes — blues and whites dissolving into dripping trails, edges receding, shapes thinning and soft. Let exposed earth appear, rough and unfinished, where ice has pulled away. Allow the meeting of water and rock to linger, a record of loss and transformation, the beginning of what might grow.
+
+As you paint, consider the places where you have had to let go — not as failure, but as honest response, as the making of space for what comes next.`,
+
+  notyet: `Let your thoughts rest on a bud in late winter, small but certain, pressed tight against branch or stem. Within that hushed green casing sleeps all the colour and fragrance of the flower to come — life compressed, held patient, shaped not by hurry but by the slow accumulation of readiness. The bud does not force its opening against the frost; it waits, attuned to the subtle promise of warmth, the precise, sweet moment when the world says it is time. Then, and only then, will it release its hidden beauty, unfolding without hesitation into the waiting air.
+
+With your brush, begin with a closed shape — a gentle swell of green, the suggestion of something contained. Let your colours be soft, reserved, hinting at what is held within. Around it, paint the cool hush of late winter: pale blues, muted browns, the quiet of a world not yet awakened. Do not rush to open the bud; let your painting linger in anticipation, in the fullness of what waits.
+
+As you paint, consider the places in yourself where potential rests, patient and whole, not yet called into bloom.`,
+
+  alive: `Let your thoughts settle on the seed in the exact moment of germination — the fragile cusp where possibility collapses into becoming. This is no slow unfolding, but a single, irrevocable act: the seed cracks open, shedding every alternative, committing wholly to one direction, one life. In that instant, every stored hope and memory bursts forth, the darkness split by a green promise. Aliveness, here, is not the long journey ahead, but this unrepeatable moment of full surrender to presence, the fierce and tender choice to be.
+
+With your brush, capture that fracturing — the sharp line where the shell gives way, the emerging shoot delicate yet determined. Let your colours pool and stretch, soft at first, then reaching boldly into space. There is no need to trace the whole story; honour instead this singular point where all converges into one.
+
+As you paint, consider the moments in your own life when you have chosen to be fully here — when you have cracked open, letting go of what might have been for the sake of what is.`
+};
+
+// ─── CONSTELLATION + STAR POSITIONS ─────────────────────────────────────────
+// Geography logic:
+// DARK ARC (lower-left): Protective → Heavy → Existential
+// ACTIVATED BRIDGE (centre-left): Activated, Self-Directed
+// RELATIONAL BAND (centre): Relational, Repair, Complex+Mixed
+// BRIGHT ARC (upper-right): Expansive, Tender+Quiet
+//
+// Cross-state neighbours positioned close regardless of constellation:
+// excitement↔anxiety, grief↔gratitude, shame↔anger, awe↔uncertainty,
+// vulnerable↔tender, hope↔alive, longing↔love, fear↔dread(despair)
+
 const constellations = [
   {
-    name: "Protective States", color: "#b8a8e8", cx: 0.15, cy: 0.18,
+    name: "Protective States", color: "#004aad",
+    cx: 0.13, cy: 0.72,
     stars: [
-      { name: "Shame", body: "snail", prompt: "A snail retreats when touched too abruptly — not because it is broken, but because it is protecting something tender.", r: 5 },
-      { name: "Fear", body: "cave", prompt: "A cave offers darkness as sanctuary. What enters is held in stillness until it is ready to meet the light again.", r: 4.5 },
-      { name: "Numbness", body: "permafrost", prompt: "Permafrost is not empty — it is holding. Whole worlds are preserved, waiting for conditions that allow thawing.", r: 4 },
-      { name: "Withdrawal", body: "seed in winter soil", prompt: "A seed gathers itself inward, conserving everything it needs. Withdrawal is intelligent preparation.", r: 4 },
-      { name: "Guarded", body: "pine cone", prompt: "A pine cone closes its scales when conditions are uncertain — not to withhold forever, but until the moisture arrives that tells it the time is right.", r: 4.5 },
-      { name: "Dissociation", body: "morning mist", prompt: "Morning mist hovers between water and air — neither fully here nor fully gone. It is between states, and the sun will call it back.", r: 3.5 },
-      { name: "Hypervigilance", body: "deer at clearing edge", prompt: "A deer reads every signal with instruments refined over millions of years. Its attention is devotion to survival, not a disorder.", r: 4 },
-      { name: "Avoidance", body: "river rerouting", prompt: "A river finds another way around a rockfall — quietly, without drama. Avoidance is sometimes the intelligence of water.", r: 3.5 },
-      { name: "Defensiveness", body: "porcupine", prompt: "A porcupine raises its quills when it senses approach before it is ready. The quills are the outermost layer of something much softer inside.", r: 4 }
+      { key:"ashamed",  name:"I feel ashamed.",    body:"The Octopus",     x:0.13, y:0.63, r:5   },
+      { key:"afraid",   name:"I feel afraid.",     body:"The Cave",        x:0.07, y:0.75, r:4.5 },
+      { key:"numb",     name:"I feel numb.",       body:"Permafrost",      x:0.16, y:0.80, r:4   },
+      { key:"withdrawn",name:"I feel withdrawn.",  body:"The Tide Pool",   x:0.22, y:0.72, r:4   },
+      { key:"guarded",  name:"I feel guarded.",    body:"The Pine Cone",   x:0.10, y:0.85, r:4.5 }
     ]
   },
   {
-    name: "Heavy States", color: "#88b8e8", cx: 0.42, cy: 0.12,
+    name: "Heavy States", color: "#0097b2",
+    cx: 0.28, cy: 0.78,
     stars: [
-      { name: "Grief", body: "moss", prompt: "Moss grows where things have fallen apart. It does not rush decay — it softens it, holds it, turns it into something that can be lived with.", r: 5 },
-      { name: "Sadness", body: "rain on still water", prompt: "Rain does not apologise for disturbing the surface. The ripples it makes are real, and they matter, and they pass.", r: 4.5 },
-      { name: "Exhaustion", body: "river delta", prompt: "A river delta is what happens when a river has travelled so far it finally slows and spreads. It becomes one of the most fertile places on earth.", r: 4 },
-      { name: "Despair", body: "dormant volcano", prompt: "A dormant volcano is not dead — it is deeply quiet. The heat is still there, waiting for the pressure that will find its way out.", r: 4.5 },
-      { name: "Heaviness", body: "clay soil after rain", prompt: "Clay holds water long after the storm has passed. It is not stuck — it is saturated. Given time and air, it loosens.", r: 4 },
-      { name: "Depression", body: "forest in deep winter", prompt: "Underground, the root systems are still communicating, still holding the possibility of spring in a language no one above ground can see.", r: 5 },
-      { name: "Apathy", body: "dried riverbed", prompt: "A dried riverbed is not indifferent — it is depleted. The capacity for flow is still written into its banks. It waits for rain it cannot summon.", r: 4 },
-      { name: "Dread", body: "sky before a storm", prompt: "The pressure drops, the birds go quiet, the light turns strange — and nothing has happened yet. Dread reads what is coming before it arrives.", r: 4.5 },
-      { name: "Meaninglessness", body: "erased sand", prompt: "The tide erases footprints not to be cruel but because that is what tides do. The blank sand is the condition for new marks.", r: 3.5 },
-      { name: "Emptiness", body: "evaporated tide pool", prompt: "A tide pool that empties in heat is not destroyed — it is temporarily beyond capacity. The basin is still there. The next tide will fill it.", r: 4 },
-      { name: "Burnout", body: "field farmed without fallow", prompt: "A field that is never left to rest slowly loses its ability to yield. Burnout is the land asking, finally demanding, to be left alone for a season.", r: 4.5 }
+      { key:"grief",     name:"I feel grief.",      body:"Moss",                  x:0.28, y:0.68, r:5   },
+      { key:"sad",       name:"I feel sad.",        body:"Rain on Still Water",   x:0.22, y:0.80, r:4.5 },
+      { key:"exhausted", name:"I feel exhausted.",  body:"The River Delta",       x:0.34, y:0.82, r:4   },
+      { key:"despair",   name:"I feel despair.",    body:"The Dormant Volcano",   x:0.20, y:0.90, r:4.5 },
+      { key:"heaviness", name:"I feel heaviness.",  body:"Clay Soil After Rain",  x:0.30, y:0.88, r:4   }
     ]
   },
   {
-    name: "Relational States", color: "#e896b8", cx: 0.72, cy: 0.15,
+    name: "Existential + Threshold States", color: "#5e17eb",
+    cx: 0.17, cy: 0.92,
     stars: [
-      { name: "Loneliness", body: "tide pool between tides", prompt: "A tide pool is not abandoned by the ocean. It is just between visits. It holds its own world in the waiting.", r: 5 },
-      { name: "Tenderness", body: "mycelium", prompt: "Mycelium works quietly beneath everything visible, passing nourishment between what is struggling and what has enough.", r: 4.5 },
-      { name: "Longing", body: "migratory bird", prompt: "A migratory bird does not invent its longing — it is written into its body. The pull is not restlessness. It is fidelity to something real.", r: 4 },
-      { name: "Love", body: "river finding the sea", prompt: "A river does not decide to reach the sea — it simply follows what it is drawn toward, carving new paths when it must.", r: 5 },
-      { name: "Jealousy", body: "plant at the window", prompt: "A plant leaning toward light is not greedy — it is honest about what it needs to survive.", r: 4 },
-      { name: "Betrayal", body: "soil after wildfire", prompt: "Soil after wildfire is not ruined — it is scorched on the surface but still alive underneath. The ground remains.", r: 4.5 },
-      { name: "Rejection", body: "spore on concrete", prompt: "A spore that lands on concrete does not stop being a spore. The conditions, not the spore, determined what was possible.", r: 4 },
-      { name: "Enmeshment", body: "ivy in the wall", prompt: "Ivy and wall become so intertwined it is hard to know where one ends and the other begins. Sometimes the ivy must be carefully separated to allow both to breathe.", r: 3.5 },
-      { name: "Invisible", body: "underground spring", prompt: "An underground spring is moving, nourishing, shaping the landscape — and no one standing above knows it is there.", r: 4 },
-      { name: "Seen", body: "plant moved into sunlight", prompt: "A plant moved into sunlight does not question whether it deserves it — it simply turns toward it and begins doing what it always knew how to do.", r: 4.5 },
-      { name: "Admiration", body: "plant in dappled light", prompt: "A small plant in the shadow of a great canopy reaches toward the gaps where light filters through.", r: 3.5 },
-      { name: "Envy", body: "plant at the crack", prompt: "A plant growing toward warmth it cannot fully access is honest about what it needs. Envy is desire that has not yet found its right direction.", r: 4 },
-      { name: "Dependency", body: "climbing plant on trellis", prompt: "A climbing plant is not weak for needing something to grow along — it is doing exactly what its nature asks.", r: 4 },
-      { name: "Compassion", body: "rain on garden and weed", prompt: "Rain does not sort what deserves water from what does not — it falls on everything, because that is the nature of rain.", r: 4.5 }
+      { key:"uncertain",  name:"I feel uncertain.",            body:"Shoreline at Dusk",     x:0.10, y:0.93, r:5   },
+      { key:"changed",    name:"I feel changed.",              body:"Forest in Succession",  x:0.18, y:0.96, r:4.5 },
+      { key:"worldgrief", name:"I feel grief for the world.", body:"Glacier in Retreat",    x:0.25, y:0.93, r:5   },
+      { key:"notyet",     name:"I feel the ache of not yet.", body:"Bud in Late Winter",    x:0.14, y:0.88, r:4.5 },
+      { key:"alive",      name:"I feel alive.",               body:"The Germinating Seed",  x:0.22, y:0.86, r:5.5 }
     ]
   },
   {
-    name: "Activated States", color: "#e89878", cx: 0.85, cy: 0.38,
+    name: "Activated States", color: "#7ed957",
+    cx: 0.38, cy: 0.62,
     stars: [
-      { name: "Anger", body: "river in flood", prompt: "A river in flood is not destroying — it is moving what has been blocked for too long. It knows exactly what it is carrying.", r: 5 },
-      { name: "Anxiety", body: "murmuration", prompt: "A murmuration does not know exactly where it is going. It responds, shifts, stays close to itself, and the movement becomes something beautiful.", r: 4.5 },
-      { name: "Urgency", body: "salmon running upstream", prompt: "A salmon answers a call so deep in its body it cannot be argued with. Urgency is not always fear. Sometimes it is purpose, moving fast.", r: 4.5 },
-      { name: "Frustration", body: "water at a blocked path", prompt: "Water tests every edge, pools with patience, and eventually finds or makes a way through. Frustration is water that has not yet found its opening.", r: 4 },
-      { name: "Restlessness", body: "tide that cannot stop", prompt: "A tide is not broken for being unable to be still. Restlessness is sometimes the body staying in rhythm with something larger than the room.", r: 4 },
-      { name: "Panic", body: "startled flock", prompt: "A flock startled into flight responds to something that demanded an answer before there was time for a considered one. The birds always land again.", r: 4.5 },
-      { name: "Impatience", body: "river at a dam", prompt: "A river pressing against a dam is carrying what it has been given, moving in the only direction available, meeting an obstacle it cannot reason with.", r: 4 },
-      { name: "Intensity", body: "geyser", prompt: "A geyser is the inevitable result of heat and water and pressure finding the only available exit. Intensity is not too much.", r: 4.5 }
+      { key:"angry",      name:"I feel angry.",      body:"River in Flood",         x:0.32, y:0.60, r:5   },
+      { key:"anxious",    name:"I feel anxious.",    body:"A Murmuration",          x:0.44, y:0.56, r:4.5 },
+      { key:"urgent",     name:"I feel urgent.",     body:"Salmon Running Upstream", x:0.38, y:0.68, r:4.5 },
+      { key:"frustrated", name:"I feel frustrated.", body:"Water at a Blocked Path", x:0.30, y:0.70, r:4   },
+      { key:"restless",   name:"I feel restless.",   body:"The Tides",              x:0.44, y:0.66, r:4   }
     ]
   },
   {
-    name: "Self-Directed States", color: "#e8d078", cx: 0.62, cy: 0.42,
+    name: "Self-Directed States", color: "#ffbd59",
+    cx: 0.50, cy: 0.68,
     stars: [
-      { name: "Self-doubt", body: "young tree in wind", prompt: "A young tree bends dramatically in the storm. The bending is what builds the root system.", r: 4.5 },
-      { name: "Inadequacy", body: "lichen on bare rock", prompt: "Lichen does not wait until conditions are ideal. It begins with almost nothing and makes something possible where nothing was before.", r: 4 },
-      { name: "Pride", body: "tree in full canopy", prompt: "A tree in full canopy grew ring by ring, year by year. Pride is the quiet acknowledgment of rings.", r: 4.5 },
-      { name: "Regret", body: "river changed course", prompt: "Rivers change course not because they were wrong before, but because the landscape shifted. The old channel is still visible.", r: 4 },
-      { name: "Guilt", body: "storm that has passed", prompt: "A storm moves through and spends itself completely. The storm, having passed, cannot undo the disturbance. But it cannot stop the slow return.", r: 4 },
-      { name: "Imposter syndrome", body: "young forest", prompt: "The trees are real, the canopy is forming, the birds have arrived — but the forest has not yet lived long enough to recognise itself as what it already is.", r: 4.5 },
-      { name: "Ambition", body: "tree toward the gap", prompt: "A tree grows toward a gap not out of greed but because light is there. Ambition is phototropism — the honest orientation toward what you need.", r: 4 },
-      { name: "Perfectionism", body: "spider rebuilding its web", prompt: "A spider's web is genuinely remarkable. But sometimes it rebuilds the same corner over and over when a different anchor point would serve better.", r: 4 },
-      { name: "Resistance", body: "stone in streambed", prompt: "A stone is simply being what it is while the water decides what to do about it. Resistance is not always obstruction. Sometimes it is integrity.", r: 3.5 },
-      { name: "Self-compassion", body: "tree shading its roots", prompt: "A tree does not withhold its own canopy from its roots. Self-compassion is the canopy remembering the roots.", r: 4.5 }
+      { key:"doubt",      name:"I feel doubt.",      body:"Young Tree in Wind",    x:0.48, y:0.62, r:4.5 },
+      { key:"inadequate", name:"I feel inadequate.", body:"Lichen on Bare Rock",   x:0.54, y:0.72, r:4   },
+      { key:"proud",      name:"I feel proud.",      body:"Tree in Full Canopy",   x:0.56, y:0.62, r:4.5 },
+      { key:"regret",     name:"I feel regret.",     body:"The River's Old Course", x:0.46, y:0.74, r:4   },
+      { key:"guilty",     name:"I feel guilty.",     body:"Meadow After Storm",    x:0.52, y:0.78, r:4   }
     ]
   },
   {
-    name: "Expansive States", color: "#80d890", cx: 0.28, cy: 0.52,
+    name: "Relational States", color: "#00bf63",
+    cx: 0.62, cy: 0.60,
     stars: [
-      { name: "Joy", body: "lichen on warm stone", prompt: "Lichen asks for almost nothing and still turns bare rock into colour. It simply cannot help but bloom where it lands.", r: 5.5 },
-      { name: "Wonder", body: "bioluminescent bay", prompt: "Bioluminescence does not happen for an audience — it is life meeting disturbance with light. Wonder is what happens when something moves through you and you glow anyway.", r: 5 },
-      { name: "Gratitude", body: "tree releasing leaves", prompt: "A tree does not grieve what it releases in autumn — it returns it. Gratitude is the full acknowledgment of what was given, offered back to the ground.", r: 4.5 },
-      { name: "Awe", body: "edge of a canyon", prompt: "A canyon is simply the result of time and water being patient with stone. Awe is what happens when you encounter patience on a scale larger than you can hold.", r: 5 },
-      { name: "Curiosity", body: "root through rock", prompt: "A root moves toward what it senses, changes direction without apology, and finds nourishment in unexpected places. Curiosity is a root in motion.", r: 4.5 },
-      { name: "Excitement", body: "storm front building", prompt: "A storm front does not apologise for the energy it carries. What looks like chaos from a distance is actually pressure becoming weather.", r: 4.5 },
-      { name: "Delight", body: "kingfisher diving", prompt: "A kingfisher enters the world completely, without hesitation. Delight is the dive — complete, committed, leaving only colour in its wake.", r: 4 },
-      { name: "Inspiration", body: "wildfire in dry grass", prompt: "Inspiration arrives when a spark meets what has been quietly drying out, waiting without knowing it was waiting, and then everything catches at once.", r: 4.5 },
-      { name: "Freedom", body: "albatross on thermal", prompt: "An albatross riding a thermal expends almost no energy. Freedom is finding the structure that carries you so well you forget you are being held.", r: 4 },
-      { name: "Playfulness", body: "fox in first snow", prompt: "A young fox in first snow has no agenda — it meets the world with its whole ridiculous, joyful self. Playfulness is the appropriate response to a world that keeps offering first snows.", r: 4 },
-      { name: "Aliveness", body: "mycelium after rain", prompt: "Rain reminds the mycelium to be fully, visibly, urgently itself. Aliveness is the right conditions arriving, and everything you already were responding at once.", r: 5 }
+      { key:"lonely",    name:"I feel lonely.",    body:"Bioluminescent Deep Ocean", x:0.56, y:0.54, r:5   },
+      { key:"tender",    name:"I feel tender.",    body:"Mycelium",                  x:0.62, y:0.50, r:4.5 },
+      { key:"longing",   name:"I feel longing.",   body:"Migratory Bird",            x:0.68, y:0.56, r:4   },
+      { key:"love",      name:"I feel love.",      body:"River to the Sea",          x:0.70, y:0.64, r:5   },
+      { key:"jealous",   name:"I feel jealous.",   body:"Plant at the Window",       x:0.60, y:0.64, r:4   },
+      { key:"betrayed",  name:"I feel betrayed.",  body:"Soil After Wildfire",       x:0.52, y:0.62, r:4.5 }
     ]
   },
   {
-    name: "Tender & Quiet States", color: "#88ccd8", cx: 0.12, cy: 0.65,
+    name: "Relational Repair States", color: "#cb6ce6",
+    cx: 0.72, cy: 0.72,
     stars: [
-      { name: "Stillness", body: "deep lake in winter", prompt: "Beneath the ice, water still moves, fish still breathe, life continues at a different pace. Stillness is not the absence of aliveness. It is aliveness turned inward.", r: 5 },
-      { name: "Peace", body: "meadow after long rain", prompt: "A meadow after rain simply releases the smell of petrichor and receives what it needed. Peace is not the absence of weather. It is the body after weather, breathing.", r: 5 },
-      { name: "Contentment", body: "bear in late autumn", prompt: "A bear in late autumn has gathered enough. Right now, in this moment, it has what it needs. Contentment is the pause between.", r: 4.5 },
-      { name: "Safety", body: "old growth forest", prompt: "Old growth has survived enough to know itself. Its roots are entangled with everything around it. Safety is deep entanglement with what holds you.", r: 4.5 },
-      { name: "Belonging", body: "river returning to watershed", prompt: "Every river is still part of its watershed. Belonging is not about proximity. It is the invisible catchment that has always claimed you.", r: 5 },
-      { name: "Solitude", body: "single candle", prompt: "A single candle does not apologise for the darkness it cannot reach — it offers what it has, steadily. Solitude is discovering that your own light is, for now, exactly enough.", r: 4 },
-      { name: "Receptivity", body: "still pool after wind", prompt: "A still pool holds a perfect reflection simply because stillness is the condition that makes reflection possible.", r: 4 },
-      { name: "Patience", body: "redwood's first inch", prompt: "A redwood sends roots down before it reaches up. Patience is knowing that the first inch and the hundredth foot require the same quality of presence.", r: 4 },
-      { name: "Gentleness", body: "dawn fog", prompt: "Fog touches everything it meets without disturbing it. Gentleness is present without pressure, touching without grasping.", r: 4 }
+      { key:"forgiving",   name:"I feel forgiving.",    body:"River Smoothing Stone",      x:0.68, y:0.72, r:5   },
+      { key:"vulnerable",  name:"I feel vulnerable.",   body:"Hermit Crab Between Shells", x:0.74, y:0.66, r:4.5 },
+      { key:"trusting",    name:"I feel trusting.",     body:"Seed Releasing to Wind",     x:0.78, y:0.74, r:4.5 },
+      { key:"repaired",    name:"I feel repaired.",     body:"The Eagle's Nest",           x:0.72, y:0.80, r:5   }
     ]
   },
   {
-    name: "Complex & Mixed States", color: "#b888d8", cx: 0.45, cy: 0.75,
+    name: "Complex + Mixed States", color: "#ff66c4",
+    cx: 0.55, cy: 0.82,
     stars: [
-      { name: "Ambivalence", body: "estuary", prompt: "An estuary is neither fully fresh nor fully salt — both, constantly negotiating, and one of the most biodiverse places on earth. Ambivalence is the meeting of two real things.", r: 5 },
-      { name: "Overwhelm", body: "forest floor after snowfall", prompt: "The forest floor bends, holds, sometimes breaks a branch, and still the ecosystem continues underneath. Overwhelm is carrying more than usual, and the roots are still there.", r: 4.5 },
-      { name: "Confusion", body: "fog in a valley", prompt: "Fog is water between states, neither cloud nor rain, finding its way. Confusion is the mind between forms, mid-transformation.", r: 4 },
-      { name: "Hope", body: "green shoot through pavement", prompt: "A green shoot through pavement responds to light with everything it has, in the only direction available. Hope is orientation toward light against the odds.", r: 5 },
-      { name: "Disappointment", body: "field after harvest", prompt: "A field after harvest is spent. The stubble left behind is not failure. It is evidence. And the field will be turned and planted again.", r: 4.5 },
-      { name: "Nostalgia", body: "hollow ancient tree", prompt: "An ancient tree with a hollow centre lost its heart to time, not weakness. The hollow is where the years lived.", r: 4 },
-      { name: "Grief & gratitude", body: "autumn", prompt: "Autumn releases and blazes at once — the light thinning and turning golden at the same time. Grief and gratitude are not opposites taking turns.", r: 5 },
-      { name: "Bittersweet", body: "last day of something good", prompt: "The last day of something good is still good — and also already ending, the ending present in every moment without cancelling the goodness.", r: 4.5 },
-      { name: "Anticipation", body: "bulb in late winter", prompt: "A bulb underground has already begun — the shoot forming in the dark. Anticipation is the knowledge that something has begun that cannot be stopped.", r: 4 },
-      { name: "Wistfulness", body: "last summer light", prompt: "The last light on a summer evening gilds everything precisely because it is about to go. Wistfulness is tenderness toward the present that is, even as you inhabit it, becoming the past.", r: 4 }
+      { key:"ambivalent",   name:"I feel ambivalent.",    body:"The Estuary",         x:0.50, y:0.84, r:5   },
+      { key:"overwhelmed",  name:"I feel overwhelmed.",   body:"Forest Floor in Snow", x:0.56, y:0.90, r:4.5 },
+      { key:"confused",     name:"I feel confused.",      body:"Fog in the Valley",   x:0.44, y:0.84, r:4   },
+      { key:"hopeful",      name:"I feel hopeful.",       body:"Green Shoot",         x:0.60, y:0.80, r:5   },
+      { key:"disappointed", name:"I feel disappointed.",  body:"Field After Harvest",  x:0.62, y:0.88, r:4   },
+      { key:"nostalgic",    name:"I feel nostalgic.",     body:"The Hollow Ancient Tree", x:0.50, y:0.76, r:4.5 }
     ]
   },
   {
-    name: "Relational Repair States", color: "#e89080", cx: 0.75, cy: 0.70,
+    name: "Expansive States", color: "#ff751f",
+    cx: 0.74, cy: 0.38,
     stars: [
-      { name: "Forgiveness", body: "river smoothing stone", prompt: "A river does not decide to smooth a stone — it simply keeps moving, and the contact over time creates something worn into beauty. Forgiveness is not a moment. It is a direction.", r: 5 },
-      { name: "Vulnerability", body: "hermit crab between shells", prompt: "A hermit crab between shells is completely exposed — it has left what no longer fits and has not yet found what comes next. This is the most dangerous moment and the only way to grow.", r: 4.5 },
-      { name: "Trust", body: "seed releasing to wind", prompt: "A seed that releases to wind has no guarantee of where it will land. It releases anyway, because staying attached is the only thing that would prevent it from becoming what it is meant to be.", r: 4.5 },
-      { name: "Repair", body: "bone knitting after break", prompt: "A broken bone begins healing immediately. What forms at the break site is denser and stronger at the fracture line than anywhere else.", r: 5 },
-      { name: "Accountability", body: "river and valley", prompt: "A river does not pretend the valley was always that shape. Accountability is looking at what your movement made, and choosing how to flow from here.", r: 4 },
-      { name: "Reconciliation", body: "two rivers meeting", prompt: "Two rivers that have travelled different landscapes — when they meet, there is a visible line where the waters run alongside each other before they merge.", r: 4.5 },
-      { name: "Tenderness after rupture", body: "new growth at the break", prompt: "A branch broken in a storm sends new shoots from the break point, reaching in directions the original branch never considered.", r: 4 },
-      { name: "Courage to return", body: "migratory bird", prompt: "A migratory bird navigates thousands of miles through storms and darkness, following something written so deeply in its body that no obstacle has cancelled it.", r: 4.5 }
+      { key:"joy",      name:"I feel joy.",      body:"Wildflowers After Rain",  x:0.72, y:0.30, r:5.5 },
+      { key:"wonder",   name:"I feel wonder.",   body:"Whale Song in Deep Ocean", x:0.80, y:0.36, r:5   },
+      { key:"grateful", name:"I feel grateful.", body:"Autumn Tree",             x:0.66, y:0.36, r:4.5 },
+      { key:"awe",      name:"I feel awe.",      body:"Edge of the Canyon",      x:0.80, y:0.46, r:5   },
+      { key:"curious",  name:"I feel curious.",  body:"Root Through Rock",       x:0.68, y:0.46, r:4.5 },
+      { key:"excited",  name:"I feel excited.",  body:"The Waggle Dance Bee",    x:0.76, y:0.52, r:4.5 }
     ]
   },
   {
-    name: "Existential & Threshold States", color: "#d8d080", cx: 0.32, cy: 0.88,
+    name: "Tender + Quiet States", color: "#ff5757",
+    cx: 0.86, cy: 0.52,
     stars: [
-      { name: "Uncertainty", body: "shoreline at dusk", prompt: "A shoreline at dusk is neither day nor water nor land — the edge of all things, where definitions soften. Uncertainty is where meaning gets made.", r: 5 },
-      { name: "Change", body: "forest in succession", prompt: "A forest in succession is never the same forest twice. None of it is loss. It is the forest becoming what the conditions are ready for.", r: 4.5 },
-      { name: "Grief for the world", body: "glacier in retreat", prompt: "A glacier in retreat is not failing — it is responding honestly to what is happening. Its grief is written in water. It does not pretend.", r: 5 },
-      { name: "Ache of not yet", body: "bud in late winter", prompt: "A bud holds everything the flower will be, in compressed and patient form. It waits for the exact right temperature, and when that moment comes, it will not hesitate.", r: 4.5 },
-      { name: "Alive", body: "tide", prompt: "A tide does not question its own rhythm. It goes out fully. It comes back fully. It is shaped by something ancient and vast, and it shows up again and again to meet the shore.", r: 6.5 },
-      { name: "Impermanence", body: "sandcastle at high tide", prompt: "A sandcastle was never built to last — it was built to be built. Impermanence is what makes the building matter.", r: 4.5 },
-      { name: "Mortality", body: "tree ring", prompt: "Each ring is one year — drought or plenty, storm or stillness — written permanently in the wood. Mortality is what makes the rings worth counting.", r: 5 },
-      { name: "Surrender", body: "leaf releasing in autumn", prompt: "A leaf arrives at the moment when holding on requires more than letting go. In releasing, it becomes something new — returned to the soil, feeding the very tree it fell from.", r: 4.5 },
-      { name: "Integration", body: "river reaching the sea", prompt: "A river that reaches the sea does not disappear — it becomes part of something vaster while remaining, in some molecular sense, itself.", r: 5 },
-      { name: "Mystery", body: "deep ocean floor", prompt: "The deep ocean floor has never been fully mapped — vast, sustaining forms of life we have not yet imagined. Mystery is the honest acknowledgment that reality is larger than our instruments.", r: 4.5 },
-      { name: "Reverence", body: "old growth at dusk", prompt: "Old growth does not demand reverence — it simply is what it is. Something in the body responds before the mind has words for it.", r: 5 },
-      { name: "The sacred", body: "soil", prompt: "Soil is the living accumulation of everything that has died and been transformed. Every sacred thing is just this: death becoming life, held in darkness, offered upward.", r: 5 }
+      { key:"still",     name:"I feel still.",     body:"Deep Lake in Winter",      x:0.88, y:0.44, r:5   },
+      { key:"peaceful",  name:"I feel peaceful.",  body:"Meadow After Long Rain",   x:0.84, y:0.52, r:5   },
+      { key:"content",   name:"I feel content.",   body:"Bear in Late Autumn",      x:0.90, y:0.56, r:4.5 },
+      { key:"safe",      name:"I feel safe.",      body:"Old Growth Forest",        x:0.82, y:0.60, r:4.5 },
+      { key:"belonging", name:"I feel belonging.", body:"River in Its Watershed",   x:0.88, y:0.64, r:5   }
     ]
   }
 ];
 
-const W = 900, H = 640;
+// Cross-state connector pairs [key1, key2]
+const crossConnectors = [
+  ["excited","anxious"],
+  ["grief","grateful"],
+  ["ashamed","angry"],
+  ["awe","uncertain"],
+  ["vulnerable","tender"],
+  ["hopeful","alive"],
+  ["longing","love"],
+  ["afraid","despair"]
+];
+
+// ─── CANVAS SETUP ────────────────────────────────────────────────────────────
+const W = 960, H = 680;
 const canvas = document.getElementById('c');
 canvas.width = W; canvas.height = H;
 const ctx = canvas.getContext('2d');
-const sky = document.getElementById('sky');
-const tooltip = document.getElementById('tooltip');
-let allStars = [];
-let pan = {x:0, y:0}, zoom = 1, dragging = false, lastPos = null;
+let allStars = [], starMap = {};
+let pan = {x:0,y:0}, zoom = 1, dragging = false, lastPos = null;
+let hovered = null;
 
 function hexToRgb(hex) {
-  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
+  return { r:parseInt(hex.slice(1,3),16), g:parseInt(hex.slice(3,5),16), b:parseInt(hex.slice(5,7),16) };
 }
+function seededRand(seed) { let s=seed; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; }
 
-function seededRand(seed) {
-  let s = seed;
-  return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-}
-
-function placeStars() {
+function buildStarMap() {
   allStars = [];
-  constellations.forEach((con, ci) => {
-    const rand = seededRand(ci * 1337 + 7);
-    con.starPositions = con.stars.map((star, si) => {
-      const angle = (si / con.stars.length) * Math.PI * 2 + ci * 0.9;
-      const dist = 38 + rand() * 52;
-      const sx = con.cx * W + Math.cos(angle) * dist + (rand() - 0.5) * 18;
-      const sy = con.cy * H + Math.sin(angle) * dist + (rand() - 0.5) * 18;
-      const obj = { x: sx, y: sy, star, con, ci };
+  starMap = {};
+  constellations.forEach(con => {
+    con.stars.forEach(star => {
+      const obj = { ...star, con, px: star.x * W, py: star.y * H };
       allStars.push(obj);
-      return obj;
+      starMap[star.key] = obj;
     });
   });
 }
 
-function drawBackground() {
+// ─── BACKGROUND ──────────────────────────────────────────────────────────────
+function drawBg() {
   ctx.fillStyle = '#070712';
-  ctx.fillRect(0, 0, W, H);
-  const rand = seededRand(99);
-  for (let i = 0; i < 320; i++) {
-    const x = rand() * W, y = rand() * H;
-    const a = 0.15 + rand() * 0.45, sz = 0.3 + rand() * 0.9;
-    ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fill();
+  ctx.fillRect(0,0,W,H);
+  const r = seededRand(77);
+  for (let i=0;i<300;i++) {
+    const x=r()*W, y=r()*H, a=0.12+r()*0.4, sz=0.3+r()*0.9;
+    ctx.beginPath(); ctx.arc(x,y,sz,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fill();
   }
 }
 
-function draw(hovered) {
-  ctx.clearRect(0, 0, W, H);
-  drawBackground();
+// ─── DRAW ─────────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  drawBg();
   ctx.save();
-  ctx.translate(pan.x * zoom, pan.y * zoom);
+  ctx.translate(pan.x*zoom, pan.y*zoom);
   ctx.scale(zoom, zoom);
 
+  // Constellation outlines
   constellations.forEach(con => {
-    if (!con.starPositions || con.starPositions.length < 2) return;
     const rgb = hexToRgb(con.color);
-    ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.22)`;
-    ctx.lineWidth = 0.8; ctx.setLineDash([3, 6]);
+    if (con.stars.length < 2) return;
+    ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`;
+    ctx.lineWidth = 0.7; ctx.setLineDash([2,6]);
     ctx.beginPath();
-    con.starPositions.forEach((sp, i) => { i === 0 ? ctx.moveTo(sp.x, sp.y) : ctx.lineTo(sp.x, sp.y); });
+    con.stars.forEach((s,i) => { i===0 ? ctx.moveTo(s.x*W,s.y*H) : ctx.lineTo(s.x*W,s.y*H); });
     ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
-    ctx.font = '500 9.5px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`;
-    ctx.fillText(con.name.toUpperCase(), con.cx * W, con.cy * H - 62);
+    // Label
+    ctx.font='500 9px sans-serif'; ctx.textAlign='center';
+    ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},0.5)`;
+    ctx.fillText(con.name.toUpperCase(), con.cx*W, con.cy*H - 52);
   });
 
+  // Cross-state connectors
+  crossConnectors.forEach(([k1,k2]) => {
+    const s1 = starMap[k1], s2 = starMap[k2];
+    if (!s1||!s2) return;
+    const rgb1 = hexToRgb(s1.con.color);
+    const rgb2 = hexToRgb(s2.con.color);
+    const grd = ctx.createLinearGradient(s1.x*W,s1.y*H,s2.x*W,s2.y*H);
+    grd.addColorStop(0,`rgba(${rgb1.r},${rgb1.g},${rgb1.b},0.25)`);
+    grd.addColorStop(1,`rgba(${rgb2.r},${rgb2.g},${rgb2.b},0.25)`);
+    ctx.strokeStyle = grd;
+    ctx.lineWidth = 0.6; ctx.setLineDash([1,5]);
+    ctx.beginPath();
+    ctx.moveTo(s1.x*W,s1.y*H); ctx.lineTo(s2.x*W,s2.y*H);
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  // Stars
   allStars.forEach(sp => {
     const isHov = hovered === sp;
     const rgb = hexToRgb(sp.con.color);
-    const r = sp.star.r;
+    const r = sp.r;
+    const sx = sp.x*W, sy = sp.y*H;
+
+    // Glow halo
     if (isHov) {
-      ctx.beginPath(); ctx.arc(sp.x, sp.y, r + 10, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`; ctx.fill();
-      ctx.beginPath(); ctx.arc(sp.x, sp.y, r + 5, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.25)`; ctx.fill();
+      ctx.beginPath(); ctx.arc(sx,sy,r+12,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},0.12)`; ctx.fill();
+      ctx.beginPath(); ctx.arc(sx,sy,r+6,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},0.22)`; ctx.fill();
     } else {
-      ctx.beginPath(); ctx.arc(sp.x, sp.y, r + 3, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`; ctx.fill();
+      ctx.beginPath(); ctx.arc(sx,sy,r+3,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`; ctx.fill();
     }
-    ctx.beginPath(); ctx.arc(sp.x, sp.y, r, 0, Math.PI * 2);
-    const grad = ctx.createRadialGradient(sp.x - r * 0.35, sp.y - r * 0.35, 0, sp.x, sp.y, r);
-    grad.addColorStop(0, `rgba(255,255,255,1)`);
-    grad.addColorStop(0.35, `rgba(${rgb.r},${rgb.g},${rgb.b},1)`);
-    grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)`);
-    ctx.fillStyle = grad; ctx.fill();
-    ctx.font = `${isHov ? '500' : '400'} ${isHov ? 11.5 : 10.5}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = isHov ? `rgba(${rgb.r},${rgb.g},${rgb.b},1)` : `rgba(${rgb.r},${rgb.g},${rgb.b},0.88)`;
-    ctx.fillText(sp.star.name, sp.x, sp.y + r + 14);
+
+    // Star body
+    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2);
+    const g = ctx.createRadialGradient(sx-r*0.3,sy-r*0.3,0,sx,sy,r);
+    g.addColorStop(0,'rgba(255,255,255,1)');
+    g.addColorStop(0.35,`rgba(${rgb.r},${rgb.g},${rgb.b},1)`);
+    g.addColorStop(1,`rgba(${rgb.r},${rgb.g},${rgb.b},0.45)`);
+    ctx.fillStyle=g; ctx.fill();
+
+    // Label
+    ctx.font=`${isHov?'500':'400'} ${isHov?11:10}px sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillStyle=isHov?`rgba(${rgb.r},${rgb.g},${rgb.b},1)`:`rgba(${rgb.r},${rgb.g},${rgb.b},0.85)`;
+    const label = sp.name.replace('I feel ','').replace('.','');
+    ctx.fillText(label.charAt(0).toUpperCase()+label.slice(1), sx, sy+r+13);
   });
 
   ctx.restore();
 }
 
-function getHovered(mx, my) {
-  const wx = mx / zoom - pan.x, wy = my / zoom - pan.y;
-  for (let i = allStars.length - 1; i >= 0; i--) {
-    const sp = allStars[i];
-    const dx = wx - sp.x, dy = wy - sp.y;
-    if (Math.sqrt(dx * dx + dy * dy) < sp.star.r + 10) return sp;
+// ─── INTERACTION ─────────────────────────────────────────────────────────────
+function getHovered(mx,my) {
+  const wx=mx/zoom-pan.x, wy=my/zoom-pan.y;
+  for (let i=allStars.length-1;i>=0;i--) {
+    const sp=allStars[i];
+    const dx=wx-sp.x*W, dy=wy-sp.y*H;
+    if (Math.sqrt(dx*dx+dy*dy)<sp.r+10) return sp;
   }
   return null;
 }
 
 let animFrame;
-function render(hovered) {
-  cancelAnimationFrame(animFrame);
-  animFrame = requestAnimationFrame(() => draw(hovered));
-}
+function render() { cancelAnimationFrame(animFrame); animFrame=requestAnimationFrame(draw); }
 
 canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = W / rect.width, scaleY = H / rect.height;
-  const mx = (e.clientX - rect.left) * scaleX, my = (e.clientY - rect.top) * scaleY;
-  if (dragging && lastPos) {
-    pan.x += (mx - lastPos.x) / zoom; pan.y += (my - lastPos.y) / zoom;
-    lastPos = { x: mx, y: my }; tooltip.style.opacity = 0; render(null); return;
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
+  if (dragging&&lastPos) {
+    pan.x+=(mx-lastPos.x)/zoom; pan.y+=(my-lastPos.y)/zoom;
+    lastPos={x:mx,y:my}; render(); return;
   }
-  const hov = getHovered(mx, my);
-  canvas.style.cursor = hov ? 'pointer' : 'grab';
-  render(hov);
-  if (hov) {
-    document.getElementById('tt-name').textContent = `${hov.star.name} — ${hov.star.body}`;
-    document.getElementById('tt-body').textContent = hov.star.prompt;
-    const skyRect = sky.getBoundingClientRect();
-    tooltip.style.left = Math.min(e.clientX - skyRect.left + 14, sky.offsetWidth - 270) + 'px';
-    tooltip.style.top = Math.min(e.clientY - skyRect.top + 14, sky.offsetHeight - 120) + 'px';
-    tooltip.style.opacity = 1;
-  } else { tooltip.style.opacity = 0; }
+  const h=getHovered(mx,my);
+  if (h!==hovered) { hovered=h; render(); }
+  canvas.style.cursor=h?'pointer':'grab';
+});
+
+canvas.addEventListener('click', e => {
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
+  const h=getHovered(mx,my);
+  if (h) openCard(h);
 });
 
 canvas.addEventListener('mousedown', e => {
-  dragging = true;
-  const rect = canvas.getBoundingClientRect();
-  lastPos = { x: (e.clientX - rect.left) * (W / rect.width), y: (e.clientY - rect.top) * (H / rect.height) };
-  canvas.style.cursor = 'grabbing';
+  dragging=true;
+  const rect=canvas.getBoundingClientRect();
+  lastPos={x:(e.clientX-rect.left)*(W/rect.width),y:(e.clientY-rect.top)*(H/rect.height)};
+  canvas.style.cursor='grabbing';
 });
-
-canvas.addEventListener('mouseup', () => { dragging = false; lastPos = null; canvas.style.cursor = 'grab'; });
-canvas.addEventListener('mouseleave', () => { dragging = false; lastPos = null; tooltip.style.opacity = 0; render(null); });
-
-canvas.addEventListener('wheel', e => {
+canvas.addEventListener('mouseup', ()=>{ dragging=false; lastPos=null; canvas.style.cursor='grab'; });
+canvas.addEventListener('mouseleave', ()=>{ dragging=false; lastPos=null; hovered=null; render(); });
+canvas.addEventListener('wheel', e=>{
   e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) * (W / rect.width), my = (e.clientY - rect.top) * (H / rect.height);
-  const wx = mx / zoom - pan.x, wy = my / zoom - pan.y;
-  zoom = Math.max(0.5, Math.min(5, zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
-  pan.x = mx / zoom - wx; pan.y = my / zoom - wy;
-  render(null);
-}, { passive: false });
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(W/rect.width), my=(e.clientY-rect.top)*(H/rect.height);
+  const wx=mx/zoom-pan.x, wy=my/zoom-pan.y;
+  zoom=Math.max(0.4,Math.min(5,zoom*(e.deltaY<0?1.12:0.9)));
+  pan.x=mx/zoom-wx; pan.y=my/zoom-wy; render();
+},{passive:false});
 
+// ─── CARD ────────────────────────────────────────────────────────────────────
+function openCard(sp) {
+  document.getElementById('card-color-bar').style.background = sp.con.color;
+  document.getElementById('card-feeling').textContent = sp.name;
+  document.getElementById('card-body').style.color = sp.con.color;
+  document.getElementById('card-body').textContent = sp.body;
+  document.getElementById('card-prompt').textContent = P[sp.key] || '';
+  document.getElementById('card-constellation').textContent = sp.con.name;
+  document.getElementById('overlay').classList.add('active');
+}
+function closeCard() { document.getElementById('overlay').classList.remove('active'); }
+document.getElementById('overlay').addEventListener('click', e => { if(e.target===document.getElementById('overlay')) closeCard(); });
+
+// ─── LEGEND ──────────────────────────────────────────────────────────────────
 const legend = document.getElementById('legend');
 constellations.forEach(con => {
-  const item = document.createElement('div');
-  item.className = 'leg-item';
-  item.innerHTML = `<div class="leg-dot" style="background:${con.color}"></div><span>${con.name}</span>`;
-  item.addEventListener('click', () => {
-    zoom = 2; pan.x = W / 2 / zoom - con.cx * W; pan.y = H / 2 / zoom - con.cy * H; render(null);
+  const item=document.createElement('div'); item.className='leg-item';
+  item.innerHTML=`<div class="leg-dot" style="background:${con.color}"></div><span>${con.name}</span>`;
+  item.addEventListener('click',()=>{
+    zoom=2.2; pan.x=W/2/zoom-con.cx*W; pan.y=H/2/zoom-con.cy*H; render();
   });
   legend.appendChild(item);
 });
 
-placeStars();
-render(null);
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildStarMap();
+render();
 </script>
 </body>
 </html>
+DONE
+echo "Done"
